@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feliz Día de la Mujer</title>
+    <style>
+        :root {
+            --text-color: #4a148c;
+            --accent-color: #e040fb;
+            --shadow: rgba(74, 20, 140, 0.35);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: radial-gradient(ellipse at 60% 40%, #e1bee7 0%, #f3e5f5 60%, #ede7f6 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* ── Escena con perspectiva 3D ── */
+        .scene {
+            position: relative;
+            width: min(88vw, 380px);
+            cursor: pointer;
+            /* espacio para que la carta suba */
+            margin-top: 120px;
+        }
+
+        /* ── SVG base del sobre ── */
+        .env-svg {
+            width: 100%;
+            display: block;
+            position: relative;
+            z-index: 3;
+            filter: drop-shadow(0 14px 30px var(--shadow));
+        }
+
+        /* ── Solapa superior ──
+           Está en su propio SVG encima del sobre,
+           con transform-origin en el borde superior. */
+        .flap-wrap {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%;
+            /* altura proporcional: la solapa llega al ~53% del alto del sobre */
+            height: 53%;
+            z-index: 5;
+            /* perspectiva local para el flip 3D */
+            perspective: 700px;
+            pointer-events: none;
+        }
+
+        .flap-svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+            transform-origin: top center;
+            transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+            backface-visibility: hidden;
+        }
+
+        /* Cuando el sobre está abierto, la solapa rota hacia atrás */
+        .scene.open .flap-svg {
+            transform: perspective(700px) rotateX(-180deg);
+        }
+
+        /* ── Tarjeta ── */
+        .card-wrap {
+            position: absolute;
+            /* centrada horizontalmente */
+            left: 7%;
+            width: 86%;
+            /* empieza dentro del sobre */
+            bottom: 6%;
+            height: 80%;
+            z-index: 2;           /* detrás del SVG del sobre */
+            transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.45s,
+                        z-index   0s                                    0.45s;
+        }
+
+        /* Una vez abierto, la tarjeta sube por encima del sobre */
+        .scene.open .card-wrap {
+            transform: translateY(-88%);
+            z-index: 6;
+        }
+
+        .card {
+            width: 100%;
+            height: 100%;
+            background: #fff;
+            border-radius: 10px;
+            padding: 22px 18px 16px;
+            text-align: center;
+            box-shadow: 0 4px 18px rgba(0,0,0,0.12);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 14px;
+            transition: box-shadow 0.9s ease 0.45s;
+        }
+
+        .scene.open .card {
+            box-shadow: 0 20px 50px rgba(74,20,140,0.25);
+        }
+
+        .card h1 {
+            color: var(--accent-color);
+            font-size: clamp(1.3rem, 5vw, 1.8rem);
+            font-weight: 700;
+            opacity: 0;
+            transform: translateY(8px);
+            transition: opacity 0.5s ease 1.2s, transform 0.5s ease 1.2s;
+        }
+
+        .scene.open .card h1 {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .card p {
+            color: var(--text-color);
+            font-size: clamp(0.85rem, 2.8vw, 0.98rem);
+            line-height: 1.65;
+            min-height: 5em;
+        }
+
+        /* ── Partículas ── */
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 20;
+        }
+
+        @keyframes floatUp {
+            0%   { transform: translateY(0)      scale(1); opacity: 0.9; }
+            100% { transform: translateY(-170px) scale(0); opacity: 0;   }
+        }
+
+        /* ── Overlay corazón ── */
+        .heart-overlay {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(243, 229, 245, 0.93);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.55s ease;
+        }
+
+        .heart-overlay.visible {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .heart-svg {
+            width: 130px;
+            height: 130px;
+            transform: scale(0);
+            transition: transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .heart-overlay.visible .heart-svg {
+            transform: scale(1);
+            animation: heartbeat 1.5s ease-in-out infinite 0.55s;
+        }
+
+        @keyframes heartbeat {
+            0%, 100% { transform: scale(1);    }
+            30%       { transform: scale(1.12); }
+            60%       { transform: scale(0.96); }
+        }
+
+        .heart-label {
+            margin-top: 22px;
+            font-size: clamp(1.1rem, 4vw, 1.5rem);
+            font-weight: 700;
+            color: var(--text-color);
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.5s ease 0.25s, transform 0.5s ease 0.25s;
+            text-align: center;
+        }
+
+        .heart-overlay.visible .heart-label {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        @media (min-width: 768px) {
+            .scene { width: min(68vw, 460px); }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ── Overlay corazón ── -->
+<div class="heart-overlay" id="heartOverlay">
+    <svg class="heart-svg" viewBox="0 0 100 92" xmlns="http://www.w3.org/2000/svg">
+        <path d="M50 88 C50 88 4 56 4 28 C4 13.5 15.5 4 28 4 C36.5 4 44 8.5 50 16.5 C56 8.5 63.5 4 72 4 C84.5 4 96 13.5 96 28 C96 56 50 88 50 88Z" fill="#e040fb"/>
+        <path d="M50 88 C50 88 4 56 4 28 C4 13.5 15.5 4 28 4 C36.5 4 44 8.5 50 16.5 C56 8.5 63.5 4 72 4 C84.5 4 96 13.5 96 28 C96 56 50 88 50 88Z" fill="none" stroke="#9c27b0" stroke-width="1.5"/>
+        <ellipse cx="36" cy="22" rx="8" ry="5" fill="white" opacity="0.18" transform="rotate(-30 36 22)"/>
+    </svg>
+    <div class="heart-label">Feliz Día de la Mujer 💜</div>
+</div>
+
+<!-- ── Escena ── -->
+<div class="scene" id="scene">
+
+    <!-- Tarjeta (detrás del sobre al inicio) -->
+    <div class="card-wrap">
+        <div class="card">
+            <h1>8 de Marzo</h1>
+            <p id="messageContainer"></p>
+        </div>
+    </div>
+
+    <!-- Cuerpo del sobre (sin solapa) -->
+    <svg class="env-svg" viewBox="0 0 400 260" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <linearGradient id="bodyGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stop-color="#8e24aa"/>
+                <stop offset="100%" stop-color="#6a1b9a"/>
+            </linearGradient>
+            <filter id="envShadow" x="-5%" y="-5%" width="115%" height="130%">
+                <feDropShadow dx="0" dy="8" stdDeviation="10"
+                              flood-color="#4a148c" flood-opacity="0.28"/>
+            </filter>
+        </defs>
+
+        <!-- Cuerpo -->
+        <rect x="0" y="0" width="400" height="260" rx="10" ry="10"
+              fill="url(#bodyGrad)" filter="url(#envShadow)"/>
+
+        <!-- Pliegue interior visible (en V desde esquinas al centro) -->
+        <!-- lado izquierdo -->
+        <polygon points="0,0 0,260 200,130"   fill="#7b1fa2" opacity="0.55"/>
+        <!-- lado derecho -->
+        <polygon points="400,0 400,260 200,130" fill="#4a148c" opacity="0.45"/>
+        <!-- solapa inferior -->
+        <polygon points="0,260 400,260 200,130" fill="#5c1494"/>
+        <line x1="0"   y1="260" x2="200" y2="130" stroke="#4a0080" stroke-width="0.8" opacity="0.6"/>
+        <line x1="400" y1="260" x2="200" y2="130" stroke="#4a0080" stroke-width="0.8" opacity="0.6"/>
+
+        <!-- Líneas de pliegue superior (la solapa apoya aquí) -->
+        <line x1="0"   y1="0" x2="200" y2="138" stroke="#9c27b0" stroke-width="0.8" opacity="0.4"/>
+        <line x1="400" y1="0" x2="200" y2="138" stroke="#9c27b0" stroke-width="0.8" opacity="0.4"/>
+    </svg>
+
+    <!-- Solapa superior (SVG separado, animada con rotateX) -->
+    <div class="flap-wrap">
+        <svg class="flap-svg" viewBox="0 0 400 138" preserveAspectRatio="none"
+             xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <linearGradient id="flapGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%"   stop-color="#ba68c8"/>
+                    <stop offset="100%" stop-color="#8e24aa"/>
+                </linearGradient>
+                <!-- cara trasera de la solapa (se ve al abrirse) -->
+                <linearGradient id="flapBack" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%"   stop-color="#6a1b9a"/>
+                    <stop offset="100%" stop-color="#4a148c"/>
+                </linearGradient>
+            </defs>
+
+            <!-- Cara frontal de la solapa -->
+            <polygon points="0,0 400,0 200,138" fill="url(#flapGrad)"/>
+
+            <!-- Brillo sutil en borde superior -->
+            <rect x="0" y="0" width="400" height="5" rx="5" fill="white" opacity="0.12"/>
+
+            <!-- Sombra en el borde inferior de la solapa -->
+            <line x1="0"   y1="0"   x2="200" y2="138" stroke="#7b1fa2" stroke-width="1" opacity="0.5"/>
+            <line x1="400" y1="0"   x2="200" y2="138" stroke="#7b1fa2" stroke-width="1" opacity="0.5"/>
+        </svg>
+    </div>
+
+</div><!-- /scene -->
+
+<script>
+    const scene   = document.getElementById('scene');
+    const msgEl   = document.getElementById('messageContainer');
+    const overlay = document.getElementById('heartOverlay');
+
+    const text = "Hoy es tu día, aunque en realidad todos deberían serlo. Gracias por todo lo que eres, por lo que das, y por seguir adelante incluso cuando cuesta. El mundo es mejor contigo en él. 💜";
+
+    let isOpen = false, typingDone = false, timer;
+
+    scene.addEventListener('click', () => {
+        if (!isOpen) {
+            isOpen = true;
+            scene.classList.add('open');
+            spawnParticles();
+            // El typewriter empieza cuando la tarjeta ya subió (~1.35s total)
+            setTimeout(typewriter, 1350);
+        } else if (typingDone) {
+            overlay.classList.add('visible');
+        }
+    });
+
+    overlay.addEventListener('click', () => overlay.classList.remove('visible'));
+
+    /* ── Typewriter ── */
+    function typewriter() {
+        msgEl.textContent = '';
+        let i = 0;
+        timer = setInterval(() => {
+            if (i < text.length) {
+                msgEl.textContent += text[i++];
+            } else {
+                clearInterval(timer);
+                typingDone = true;
+            }
+        }, 38);
+    }
+
+    /* ── Partículas ── */
+    function spawnParticles() {
+        const rect   = scene.getBoundingClientRect();
+        const colors = ['#e040fb', '#ce93d8', '#ffffff', '#f48fb1'];
+        for (let i = 0; i < 20; i++) {
+            const p   = document.createElement('div');
+            p.classList.add('particle');
+            const size = Math.random() * 9 + 4;
+            const dur  = Math.random() * 1.3 + 0.9;
+            const delay = Math.random() * 0.4;
+            Object.assign(p.style, {
+                width:           `${size}px`,
+                height:          `${size}px`,
+                left:            `${Math.random() * rect.width}px`,
+                top:             `${rect.height * 0.42 + Math.random() * 30}px`,
+                backgroundColor: colors[Math.floor(Math.random() * colors.length)],
+                animation:       `floatUp ${dur}s ease-out ${delay}s forwards`,
+            });
+            scene.appendChild(p);
+            setTimeout(() => p.remove(), (dur + delay) * 1000);
+        }
+    }
+</script>
+</body>
+</html>
